@@ -1,8 +1,52 @@
+
+// tab to show only one review at a time
+Vue.component('product-tab', {
+    props: {
+        reviews: {
+            type: Array,
+            required: true
+        }
+    },
+    template:
+    `
+    <div>
+    <div> 
+        <span class="tab" v-for="(tab, index) in tabs" :key="index" @click="selectedTab = tab" :class="{activeTab: selectedTab === tab}">{{ tab }}</span>
+        <div class="review">
+            <p v-if="reviews.length === 0">There are no reviews yet</p>
+            <ul>
+                <li v-for="review in reviews">{{ review.name }} says "{{ review.review }}". {{ review.rating }} out of 5.</li>
+            </ul>
+        </div>
+        </div>
+        <product-review @review-submitted="addReview"></product-review>
+    </div>
+    
+    `,
+    data(){
+        return {
+            tabs: ['Reviews', 'Make a review'],
+            selectedTab: 'Reviews'
+        }
+    }
+});
+
+
+
+
 Vue.component('product-review', {
     template:
     `
     <form class="review-form" @submit.prevent="onSubmit">
       <h3>Leave a review</h3>
+
+      <p v-if="errors.length">
+        <strong>Please correct the following error(s):</strong>
+        <ul>
+            <li v-for="error in errors">{{ error }}</li>
+        </ul>      
+      </p>
+
       <p>
         <label for="name">Name:</label>
         <input id="name" v-model="name" placeholder="name">
@@ -10,7 +54,7 @@ Vue.component('product-review', {
       
       <p>
         <label for="review">Review:</label>      
-        <textarea id="review" v-model="review" required></textarea>
+        <textarea id="review" v-model="review"></textarea>
       </p>
       
       <p>
@@ -23,7 +67,24 @@ Vue.component('product-review', {
           <option>1</option>
         </select>
       </p>
-          
+        
+      <p>
+        Would you recommend this product?
+      </p>
+
+      <p>
+        <label for="recommend">Yes</label>
+        <input type="radio" value="Yes" v-model="recommend">
+      </p>
+      <p>
+        <label for="recommend">No way!</label>
+        <input type="radio" value="No" v-model="recommend">
+      </p>
+      <p>
+        <label for="recommend">Maybes...</label>
+        <input type="radio" value="Maybe" v-model="recommend">
+      </p>
+
       <p>
         <input type="submit" value="Submit">  
       </p>    
@@ -34,21 +95,45 @@ Vue.component('product-review', {
         return {
             name: null,
             review: null,
-            rating: null
+            rating: null,
+            recommend: null,
+            errors: []
         }
     },
     methods: {
         onSubmit() {
-            var productReview = {
-                name: this.name,
-                review: this.review,
-                rating: this.rating
-            };
-            // send this product review up to the Product component
-            this.$emit('review-submitted', productReview);
-            this.name = null,
-            this.review = null,
-            this.rating = null
+
+            this.errors = [];
+
+            if(this.name && this.review && this.rating && this.recommend){
+                var productReview = {
+                    name: this.name,
+                    review: this.review,
+                    rating: this.rating,
+                    recommend: this.recommend
+                };
+                // send this product review up to the Product component
+                this.$emit('review-submitted', productReview);
+                this.name = null,
+                this.review = null,
+                this.rating = null,
+                this.recommend = null
+            }
+            else {
+                // if this.name is falsy (so if oppostite or !this.name evaluates to true)
+                if(!this.name) {
+                    this.errors.push('The Name field is required');
+                }
+                if(!this.review) {
+                    this.errors.push('The Review field is required');
+                }
+                if(!this.rating) {
+                    this.errors.push('The Rating field is required');
+                }
+                if(!this.recommend) {
+                    this.errors.push('Please tell us whether you would recommend this product!');
+                }
+            }  
         }
     }
 
@@ -108,14 +193,7 @@ Vue.component('product', {
         <p v-else>Out of stock</p>  
         <p>Shipping: {{ shipping }}</p>         
     </div>
-    <div class="review">
-        <h2>{{ product }} Reviews</h2>
-        <p v-if="reviews.length === 0">There are no reviews yet</p>
-        <ul>
-            <li v-for="review in reviews">{{ review.name }} says "{{ review.review }}". {{ review.rating }} out of 5.</li>
-        </ul>
-    </div>
-    <product-review @review-submitted="addReview"></product-review>
+    <product-tab :reviews="reviews"></product-tab>
     <div class="product-video">
         <a v-bind:href="video"><h2>See this wicked {{ product }} in action!</h2></a>
     </div>
